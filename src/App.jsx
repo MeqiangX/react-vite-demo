@@ -2,84 +2,127 @@ import { useState, useEffect } from 'react'
 import { SpeedInsights } from '@vercel/speed-insights/react'
 import './App.css'
 import { bitable } from '@lark-base-open/connector-api';
-import { Button, Form, Input } from 'antd';
+import { Button, Form, Select, ConfigProvider } from 'antd';
+import {
+  CloseOutlined,
+  TeamOutlined,
+  DesktopOutlined,
+  UsergroupAddOutlined,
+  ClockCircleOutlined,
+  CloudServerOutlined
+} from '@ant-design/icons';
+import Logo from './components/Logo';
 
+// Define the system options with icons
+const SYSTEM_OPTIONS = [
+  { label: <span className="custom-select-option"><TeamOutlined /> CRM系统</span>, value: 'crm' },
+  { label: <span className="custom-select-option"><DesktopOutlined /> OA</span>, value: 'oa' },
+  { label: <span className="custom-select-option"><UsergroupAddOutlined /> 人力系统</span>, value: 'hr' },
+  { label: <span className="custom-select-option"><ClockCircleOutlined /> 考勤</span>, value: 'attendance' },
+  { label: <span className="custom-select-option"><CloudServerOutlined /> SaleForce</span>, value: 'salesforce' },
+];
 
 function App() {
-  const [value, setValue] = useState('');
-  const [userId, setUserId] = useState('');
-  const [tenantKey, setTenantKey] = useState('');
+  const [form] = Form.useForm();
 
-  console.log('test');
+  // Keep existing state logic
   useEffect(() => {
-    // 获取指定同步表已保存的配置，在修改同步表配置时，可使用该 API 拿到所需的配置。
     bitable.getConfig().then(config => {
-      console.log('pre sync config', config);
-      setValue(config?.value || '');
-    });
-    // 
-    bitable.getUserId().then(id => {
-      console.log('userId', id);
-      setUserId(id);
-    });
-    bitable.getTenantKey().then(key => {
-      console.log('tenantKey', key);
-      setTenantKey(key);
-    })
-  }, [])
-
-  const handleSaveConfig = (config) => {
-    console.log('config', config)
-    // 请求后端接口
-    fetch('https://python-demo-python-tedt-dkssijuhwt.cn-shenzhen.fcapp.run/table_records', {
-        method: 'POST', // 必须指定 POST 方法
-        headers: {
-          'Content-Type': 'application/json', // 声明请求体为 JSON 格式
-          // 可选：添加认证 Token（如用户登录后携带）
-          // 'Authorization': 'Bearer ' + localStorage.getItem('token')
-        },
-        body: JSON.stringify({}) // 关键：将 JS 对象转为 JSON 字符串
+      if (config) {
+        form.setFieldsValue(config);
       }
-    )
-    .then(res => res.json())
-    .then(data => {
-      console.log(JSON.stringify(data, null, 2, { ensureAscii: false }));
     });
-    
-    bitable.saveConfigAndGoNext(config)
-  }
+  }, [form]);
+
+  const handleSaveConfig = (values) => {
+    console.log('Saved config:', values);
+    bitable.saveConfigAndGoNext(values);
+  };
 
   return (
-    <div>
-      <Form
-        name="basic"
-        labelCol={{ span: 8 }}
-        wrapperCol={{ span: 16 }}
-        style={{ maxWidth: 600 }}
-        initialValues={{ remember: true }}
-        onFinish={handleSaveConfig}
-        autoComplete="off"
-      >
-        <Form.Item
-          label="配置项-1"
-          name="config-item-1"
-        >
-          <Input />
-        </Form.Item>
-        <Form.Item
-          label="配置项-2"
-          name="config-item-2"
-        >
-          <Input />
-        </Form.Item>
-        <Form.Item
-          label=""
-        >
-          <Button type="primary" htmlType="submit">下一步</Button>
-        </Form.Item>
-      </Form>
-      <SpeedInsights />
-    </div>
+    <ConfigProvider
+      theme={{
+        token: {
+          colorPrimary: '#0052cc',
+          borderRadius: 4,
+          fontFamily: 'inherit',
+        },
+        components: {
+          Button: {
+            controlHeight: 32,
+            borderRadius: 3,
+          },
+          Select: {
+            controlHeight: 40,
+            borderRadius: 3,
+          },
+          Form: {
+            itemMarginBottom: 16,
+          }
+        }
+      }}
+    >
+      <div className="app-container">
+        <div className="config-card">
+          <div className="card-header">
+            <h1 className="card-title">Base系统数据同步配置</h1>
+            <button className="close-btn" aria-label="Close">
+              <CloseOutlined />
+            </button>
+          </div>
+
+          <div className="card-body">
+            <div className="section-label">选择数据源</div>
+
+            <Form
+              form={form}
+              layout="vertical"
+              onFinish={handleSaveConfig}
+              initialValues={{
+                systemType: 'salesforce', // Default
+                project: 'project_2'
+              }}
+            >
+              {/* Requested New Dropdown with Icons */}
+              <Form.Item
+                label="系统类型"
+                name="systemType"
+                rules={[{ required: true, message: '请选择系统类型' }]}
+              >
+                <Select
+                  placeholder="请选择系统类型"
+                  options={SYSTEM_OPTIONS}
+                />
+              </Form.Item>
+
+              {/* Project Dropdown */}
+              <Form.Item
+                label="项目"
+                name="project"
+              >
+                <Select
+                  placeholder="选择项目"
+                  options={[
+                    { label: '12.4专用项目2', value: 'project_2' },
+                    { label: '通用项目 A', value: 'project_a' }
+                  ]}
+                />
+              </Form.Item>
+            </Form>
+
+            <div className="info-box">
+              提示：数据表记录数上限为 20000，超出部分将无法同步
+            </div>
+          </div>
+
+          <div className="card-footer">
+            <Button>取消</Button>
+            <Button type="primary" onClick={() => form.submit()}>下一步</Button>
+          </div>
+        </div>
+        <SpeedInsights />
+      </div>
+    </ConfigProvider>
   )
 }
 
